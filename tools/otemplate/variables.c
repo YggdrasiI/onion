@@ -36,7 +36,7 @@
  */
 void variable_write(parser_status * st, onion_block * b) {
 
-  function_add_code(st, "  {\n" "    const char *tmp;\n");
+  function_add_code(st, "  {\n" "    const char *tmp = NULL;\n");
   variable_solve(st, onion_block_data(b), "tmp", STRING);
   function_add_code(st,
                     "    if (tmp)\n"
@@ -88,6 +88,25 @@ void variable_solve(parser_status * st, const char *data, const char *tmpname,
                         "    %s=onion_dict_get_dict(context, %s);\n", tmpname,
                         s);
     free(s);
+  } else if (parts->head && parts->head->next
+      && 0 == strcmp(onion_block_data(parts->head->data), "meta")) {
+    const char *meta_var = onion_block_data(parts->head->next->data);
+    if (0 == strcmp(meta_var, "loop0") ||
+        0 == strcmp(meta_var, "loop")  )
+    {
+      st->template_using_loop_meta_vars = 2;
+      function_add_code(st,
+          "    char tmp_number[22];\n"
+          "    snprintf(tmp_number, sizeof(tmp_number), \"%%d\", (meta->%2$s));\n"
+          "    %1$s = &tmp_number[0];\n",
+          tmpname, meta_var);
+    }else if(0 == strcmp(meta_var, "key")){
+      function_add_code(st,
+        "    %1$s = meta->key;", tmpname);
+    }else {
+      function_add_code(st,
+        "    tmp = \"Error: Access on undefined meta variable\";");
+    }
   } else {
     if (type == STRING)
       function_add_code(st, "    %s=onion_dict_rget(context", tmpname);

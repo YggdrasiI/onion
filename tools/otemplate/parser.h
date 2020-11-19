@@ -67,6 +67,8 @@ struct parser_status_t {
   int status;                   /// Exit status.
   int function_count;
   int line;
+  int template_using_loop_meta_vars; // 0 - Do not include meta.vars code,
+                                     // 1 - Template has for loops, 2 - for-loop is using meta vars.
 };
 typedef struct parser_status_t parser_status;
 
