@@ -88,6 +88,19 @@ void variable_solve(parser_status * st, const char *data, const char *tmpname,
                         "    %s=onion_dict_get_dict(context, %s);\n", tmpname,
                         s);
     free(s);
+  } else if (parts->head && parts->head->next
+      && 0 == strcmp(onion_block_data(parts->head->data), "meta")) {
+    const char *meta_var = onion_block_data(parts->head->next->data);
+    if (0 == strcmp(meta_var, "loop0") ||
+        0 == strcmp(meta_var, "loop")  )
+    {
+      function_add_code(st,
+          "    char number_%1$s[22];\n %1$s=&number_%1$s[0];\n",
+          tmpname);
+      function_add_code(st,
+          "    snprintf(number_%1$s, 22, \"%%d\", (meta->%2$s));\n",
+          tmpname, meta_var);
+    }
   } else {
     if (type == STRING)
       function_add_code(st, "    %s=onion_dict_rget(context", tmpname);
