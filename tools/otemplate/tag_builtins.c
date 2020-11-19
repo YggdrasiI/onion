@@ -93,23 +93,31 @@ void tag_for(parser_status * st, list * l) {
   function_add_code(st,
                     "    onion_dict *tmpcontext=onion_dict_hard_dup(context);\n"
                     "    if (loopdict){\n"
-                    "      dict_res dr={ .dict = tmpcontext, .res=res };\n"
+                    "      dict_res dr={ .dict = tmpcontext, .res=res,"
+                    " .meta= ONION_TEMPLATE_META_INIT };\n"
+                    /* Setup of meta vars for 'tag_for' */
+                    "      dr.meta.loop0 = -1;\n"
+                    "      dr.meta.loop = 0;\n"
                     "      onion_dict_preorder(loopdict, ");
   function_data *d = function_new(st, NULL);
   d->signature = "dict_res *dr, const char *key, const void *value, int flags";
 
   function_add_code(st,
-                    "  onion_dict_add(dr->dict, \"%s\", value, OD_DUP_VALUE|OD_REPLACE|(flags&OD_TYPE_MASK));\n",
+                    "  onion_dict_add(dr->dict, \"%s\", value, OD_DUP_VALUE|OD_REPLACE|(flags&OD_TYPE_MASK));\n"
+                    /* Change of meta vars for 'tag_for' loop step. */
+                    "  dr->meta.loop0++;\n"
+                    "  dr->meta.loop++;\n",
                     tag_value_arg(l, 1));
 
-  function_new(st, NULL);
+  function_data *d2 = function_new(st, NULL);
+  d2->signature = "onion_dict *context, onion_response *res, loop_meta *meta";
 }
 
 /// Ends a for
 void tag_endfor(parser_status * st, list * l) {
   // First the preorder function
   function_data *d = function_pop(st);
-  function_add_code(st, "  %s(dr->dict, dr->res);\n", d->id);
+  function_add_code(st, "  %s(dr->dict, dr->res, &dr->meta);\n", d->id);
 
   // Now the normal code
   d = function_pop(st);
