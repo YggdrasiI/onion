@@ -273,8 +273,8 @@ extern "C" {
     OWS_TEXT = 1,
     OWS_BINARY = 2,
     OWS_CONNECTION_CLOSE = 8,
-    OWS_PING = 0x0a,
-    OWS_PONG = 0x0b
+    OWS_PING = 0x09,
+    OWS_PONG = 0x0a
   };
 
   typedef enum onion_websocket_opcode_e onion_websocket_opcode;
