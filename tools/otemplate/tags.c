@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <assert.h>
 
 #include <onion/log.h>
 #include <onion/block.h>
@@ -40,10 +41,20 @@
 #include "parser.h"
 #include "tags.h"
 
+void unquote_inplace(char *str);
+
 /**
  * @short Creates a new token
  */
-tag_token *tag_token_new(const char *data, int l, token_type t) {
+tag_token *tag_token_new(const char *data, int l, token_type t, char unquote) {
+  tag_token *ret = malloc(sizeof(tag_token));
+  ret->data = strndup(data, l);
+  ret->type = t;
+  if (unquote ) unquote_inplace(ret->data);
+  return ret;
+}
+
+tag_token *tag_token_unquoted_new(const char *data, int l, token_type t) {
   tag_token *ret = malloc(sizeof(tag_token));
   ret->data = strndup(data, l);
   ret->type = t;
@@ -89,6 +100,8 @@ void tag_write(parser_status * st, onion_block * b) {
   list *command = list_new((void *)tag_token_free);
 
   char mode = 0;                // 0 skip spaces, 1 in single var, 2 in quotes
+  char backslash = 0;           // for mode=2: 0 no escaping, 1 escaping
+  char unquote = 0;              // 1 if backslash was triggered once in token
 
   // Split into elements for the list
   int i, li = 0;
@@ -101,6 +114,8 @@ void tag_write(parser_status * st, onion_block * b) {
       if (!isspace(c)) {
         if (c == '"') {
           mode = 2;
+          backslash = 0;
+          unquote = 0;
           li = i + 1;
         } else {
           mode = 1;
@@ -111,19 +126,27 @@ void tag_write(parser_status * st, onion_block * b) {
     case 1:
       if (isspace(c)) {
         mode = 0;
-        list_add(command, tag_token_new(&data[li], i - li, T_VAR));
+        list_add(command, tag_token_new(&data[li], i - li, T_VAR, 0));
       }
       break;
     case 2:
-      if (c == '"') {
-        mode = 0;
-        list_add(command, tag_token_new(&data[li], i - li, T_STRING));
+      if (c == '"'){
+          if (backslash)
+              unquote = 1;
+          else{
+              mode = 0;
+              list_add(command, tag_token_new(&data[li], i - li, T_STRING, unquote));
+          }
       }
+      if (c == '\\')
+          backslash = 1-backslash;
+      else
+          backslash = 0;
       break;
     }
   }
   if (mode == 1)
-    list_add(command, tag_token_new(&data[li], i - li, T_VAR));
+    list_add(command, tag_token_new(&data[li], i - li, T_VAR, 0));
 
   if (!command->head) {
     ONION_ERROR("%s:%d Incomplete command", st->infilename, st->line);
@@ -183,4 +206,30 @@ void tag_init() {
   tag_free();
   tags = onion_dict_new();
   tag_init_builtins();
+}
+
+/**
+ * @short Replaces \" in tag token by ".
+ */
+void unquote_inplace(char *str) {
+ /*
+  * Attention, algorithm assumes that quote char '"' never occurs
+  * without '\' prefix. This assumption holds for tag_write().
+ */
+    char *pos_in, *pos_out;
+    pos_in = str;
+    while (*pos_in++ != '\0' && *pos_in != '"'){ // str[_], str[_+1]
+    }
+    if(*pos_in == '\0') return; // no quote char contained.
+
+    assert(pos_in > str);
+    pos_out=pos_in;
+    do {
+        if( *pos_in == '"' ){
+            assert(*(pos_in-1) == '\\');
+            pos_out--;
+        }
+        *pos_out++ = *pos_in++; // str[_-d] = str[_]
+    }while (*pos_in != '\0');
+    *pos_out = '\0';
 }
