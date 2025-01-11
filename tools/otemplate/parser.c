@@ -85,6 +85,7 @@ void parse_template(parser_status * status) {
       else
         add_char(status, c);
       break;
+    case END_TAG_AFTER_PERCENTAGE:
     case TAG:
       if (c == '%')
         set_mode(status, END_TAG);
@@ -104,7 +105,10 @@ void parse_template(parser_status * status) {
       if (c == '}')
         set_mode(status, TEXT);
       else {
-        set_mode(status, END_TAG);
+        /* Here, we can not go back to TAG because
+         * TAG < TRANSITIONAL_MODE_THRESHOLD and next call of
+         * set_mode(..., END_TAG) has side effects. */
+        set_mode(status, END_TAG_AFTER_PERCENTAGE);
         add_char(status, '%');
         add_char(status, c);
       }

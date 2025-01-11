@@ -45,6 +45,7 @@ typedef enum parser_mode_e {
   END_TAG = 19,
   COMMENT = 20,                 // inside comments
   COMMENTHASH = 21,             // got an hash in a comment
+  END_TAG_AFTER_PERCENTAGE = 22,
 
 } parser_mode;
 
