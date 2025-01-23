@@ -254,6 +254,28 @@ int work(const char *infilename, const char *outfilename,
               );
   }
 
+  fprintf(status.out,
+          "#include <stdarg.h>\n"
+          "inline const char * dgettext2 (char *out, size_t out_len, const char * domainname, const char * msgid, ...){\n"
+          "    const char *unformated_message = dgettext(domainname, msgid);\n"
+          "    va_list args;\n"
+          "    va_start(args, msgid);\n"
+          "    int ret = vsnprintf(out, out_len, unformated_message, args);\n"
+          "    va_end(args);\n"
+          "    if (ret < 0 || ret >= out_len){\n"
+          "        if (strlen(unformated_message) + 64 < out_len){\n"
+          "            char *p = out;\n"
+          "            p = strcpy(p, \"dgettext2 failed for '\");\n"
+          "            p = strcpy(p, unformated_message);\n"
+          "            p = strcpy(p, \"'\");\n"
+          "            return out;\n"
+          "        }\n"
+          "        return \"dgettext2 failed\";\n"
+          "    }\n"
+          "    return out;\n"
+          "}\n"
+         );
+
   functions_write_declarations_assets(&status, assets);
 
   functions_write_declarations(&status);
