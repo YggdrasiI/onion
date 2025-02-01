@@ -138,25 +138,33 @@ void tag_if(parser_status * st, list * l) {
   } else if (lc == 4) {
     const char *op = tag_value_arg(l, 2);
     const char *opcmp = NULL;
-    if (strcmp(op, "==") == 0)
+    const char *pointercmp = NULL;
+    if (strcmp(op, "==") == 0){
       opcmp = "==0";
-    else if (strcmp(op, "<=") == 0)
+      pointercmp = "op1==op2 ||";
+    }else if (strcmp(op, "<=") == 0){
       opcmp = "<=0";
-    else if (strcmp(op, "<") == 0)
+      pointercmp = "op1==op2 ||";
+    }else if (strcmp(op, "<") == 0){
       opcmp = "<0";
-    else if (strcmp(op, ">=") == 0)
+      pointercmp = "op1!=op2 &&";
+    }else if (strcmp(op, ">=") == 0){
       opcmp = ">=0";
-    else if (strcmp(op, ">") == 0)
+      pointercmp = "op1==op2 ||";
+    }else if (strcmp(op, ">") == 0){
       opcmp = ">0";
-    else if (strcmp(op, "!=") == 0)
+      pointercmp = "op1!=op2 &&";
+    }else if (strcmp(op, "!=") == 0){
       opcmp = "!=0";
+      pointercmp = "op1!=op2 &&";
+    }
     if (opcmp) {
       function_add_code(st, "  {\n" "    const char *op1, *op2;\n");
       variable_solve(st, tag_value_arg(l, 1), "op1", tag_type_arg(l, 1));
       variable_solve(st, tag_value_arg(l, 3), "op2", tag_type_arg(l, 3));
       function_add_code(st,
-                        "    if (op1==op2 || (op1 && op2 && strcmp(op1, op2)%s))\n",
-                        opcmp);
+                        "    if (%s (op1 && op2 && strcmp(op1, op2)%s))\n",
+                        pointercmp, opcmp);
     } else {
       ONION_ERROR("%s:%d Unkonwn operator for if: %s", st->infilename, st->line,
                   op);
